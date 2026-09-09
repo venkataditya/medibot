@@ -1,0 +1,26 @@
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+
+# secrets
+.env
+
+# local qdrant store and model caches
+.qdrant/
+.fastembed_cache/
+
+# next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# working notes (not part of the submission)
+docs/plans/
+docs/summaries/
+
+.DS_Store
