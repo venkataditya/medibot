@@ -4,7 +4,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from medibot import answer, reranking, retrieval, router
+from medibot import answer, index, reranking, retrieval, router, sql_rag
+from medibot.config import Settings, get_settings
+from medibot.llm import GroqLLM
 from medibot.rbac import (
     UnknownRoleError,
     can_use_sql,
@@ -83,4 +85,20 @@ class MediBot:
         return ChatResult(self._answer(self.llm, question, top), "hybrid_rag", role, sources=answer.sources_from(top))
 
 
-__all__ = ["ChatResult", "MediBot", "RetrievalType", "UnknownRoleError"]
+def build_medibot(settings: Settings | None = None) -> MediBot:
+    """Load the store and models once; the API keeps this instance for its lifetime."""
+    s = settings or get_settings()
+    llm = GroqLLM(model=s.groq_model, api_key=s.groq_api_key)
+    return MediBot(
+        client=index.make_client(s.qdrant_url, s.qdrant_path),
+        collection_name=s.collection_name,
+        embedder=index.FastEmbedder(s.dense_model, s.sparse_model),
+        reranker=reranking.CrossEncoderReranker(s.rerank_model),
+        llm=llm,
+        sql_chain=lambda question: sql_rag.sql_rag_chain(question, llm=llm, db_path=s.db_path),
+        candidate_k=s.candidate_k,
+        top_k=s.top_k,
+    )
+
+
+__all__ = ["ChatResult", "MediBot", "RetrievalType", "UnknownRoleError", "build_medibot"]

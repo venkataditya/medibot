@@ -112,3 +112,24 @@ def test_empty_question_is_rejected() -> None:
     bot, _ = make_bot(Route("docs", "general"))
     with pytest.raises(ValueError):
         bot.chat("   ", role="admin")
+
+
+def test_build_medibot_wires_settings_into_every_component(monkeypatch, tmp_path) -> None:
+    from medibot.config import Settings
+
+    made: dict[str, object] = {}
+    monkeypatch.setattr(pipeline.index, "make_client", lambda url, path: made.setdefault("client", (url, str(path))))
+    monkeypatch.setattr(pipeline.index, "FastEmbedder", lambda dense, sparse: made.setdefault("embedder", (dense, sparse)))
+    monkeypatch.setattr(pipeline.reranking, "CrossEncoderReranker", lambda name: made.setdefault("reranker", name))
+    monkeypatch.setattr(pipeline, "GroqLLM", lambda model, api_key: made.setdefault("llm", (model, api_key)))
+    monkeypatch.setattr(pipeline.sql_rag, "sql_rag_chain", lambda q, llm, db_path: f"sql:{q}:{db_path}")
+
+    settings = Settings(_env_file=None, groq_api_key="k", groq_model="m", qdrant_path=tmp_path, db_path=tmp_path / "x.db")
+    bot = pipeline.build_medibot(settings)
+
+    assert made["client"] == (None, str(tmp_path))
+    assert made["embedder"] == (settings.dense_model, settings.sparse_model)
+    assert made["reranker"] == settings.rerank_model
+    assert made["llm"] == ("m", "k")
+    assert bot.candidate_k == settings.candidate_k and bot.top_k == settings.top_k
+    assert bot.sql_chain("q") == f"sql:q:{tmp_path / 'x.db'}"
