@@ -7,8 +7,9 @@ __pycache__/
 htmlcov/
 dist/
 
-# secrets
-.env
+# secrets (any .env variant, anywhere; the example template stays tracked)
+.env*
+!.env.example
 
 # local qdrant store and model caches
 .qdrant/
@@ -18,9 +19,14 @@ dist/
 frontend/node_modules/
 frontend/.next/
 frontend/out/
+frontend/next-env.d.ts
+frontend/coverage/
 
 # working notes (not part of the submission)
-docs/plans/
-docs/summaries/
+docs/
 
 .DS_Store
+
+# typescript incremental build info
+*.tsbuildinfo
+.gstack/
