@@ -86,3 +86,25 @@ def test_index_records_upserts_both_vectors_and_payload() -> None:
 def test_client_kwargs_prefer_url_over_local_path(tmp_path) -> None:
     assert index.client_kwargs(url="http://q:6333", path=tmp_path) == {"url": "http://q:6333"}
     assert index.client_kwargs(url=None, path=tmp_path) == {"path": str(tmp_path)}
+
+
+def test_locked_store_gives_a_message_that_says_what_to_do(monkeypatch, tmp_path) -> None:
+    import pytest
+
+    def locked(**kwargs):
+        raise RuntimeError("Storage folder .qdrant is already accessed by another instance of Qdrant client.")
+
+    monkeypatch.setattr(index, "QdrantClient", locked)
+    with pytest.raises(index.StoreLockedError, match="stop the backend"):
+        index.make_client(url=None, path=tmp_path)
+
+
+def test_other_client_errors_pass_through_unchanged(monkeypatch, tmp_path) -> None:
+    import pytest
+
+    def broken(**kwargs):
+        raise RuntimeError("disk full")
+
+    monkeypatch.setattr(index, "QdrantClient", broken)
+    with pytest.raises(RuntimeError, match="disk full"):
+        index.make_client(url=None, path=tmp_path)

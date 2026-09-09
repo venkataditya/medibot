@@ -62,8 +62,21 @@ def client_kwargs(url: str | None, path: Path) -> dict[str, str]:
     return {"url": url} if url else {"path": str(path)}
 
 
+class StoreLockedError(RuntimeError):
+    pass
+
+
 def make_client(url: str | None, path: Path) -> QdrantClient:
-    return QdrantClient(**client_kwargs(url, path))
+    try:
+        return QdrantClient(**client_kwargs(url, path))
+    except RuntimeError as e:
+        if "already accessed" not in str(e):
+            raise
+        # the embedded store is single-process: the API server and the scripts cannot share it
+        raise StoreLockedError(
+            f"The Qdrant store at {path} is open in another process: stop the backend "
+            "(or any running script) first, or set QDRANT_URL to use a Qdrant server."
+        ) from e
 
 
 def ensure_collection(client: QdrantClient, name: str, dense_dim: int) -> None:
