@@ -35,6 +35,11 @@ addopts = "-q"
 markers = [
     "integration: needs the built Qdrant index and downloaded models",
 ]
+filterwarnings = [
+    # third-party noise: starlette's test client and anyio, nothing in medibot
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated",
+    "ignore:Using `httpx` with `starlette.testclient`",
+]
 
 [tool.coverage.run]
 source = ["medibot"]

@@ -11,7 +11,8 @@ class Settings(BaseSettings):
 
     groq_api_key: str = ""
     groq_model: str = "openai/gpt-oss-120b"
-    medibot_secret: str = "dev-only-secret-change-me"
+    # HS256 wants >= 32 bytes; this default is for local dev only, override in .env
+    medibot_secret: str = "dev-only-secret-change-me-before-any-real-deploy"
     token_ttl_hours: int = 8
 
     # Qdrant: embedded on-disk store by default, a server if QDRANT_URL is set
