@@ -6,6 +6,7 @@
 
 import argparse
 import logging
+import sys
 import time
 from collections import Counter
 
@@ -23,6 +24,13 @@ def summarise(records: list[ingestion.ChunkRecord]) -> str:
     lines.append("  by document:")
     lines.extend(f"    {doc:32} {n:3}" for doc, n in sorted(by_doc.items()))
     return "\n".join(lines)
+
+
+def silence_teardown_noise() -> None:
+    """A Docling dependency's resource tracker raises inside __del__ while the
+    interpreter is shutting down, after all our work is finished and flushed.
+    Those "Exception ignored in ..." tracebacks look like failures; drop them."""
+    sys.unraisablehook = lambda unraisable: None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -52,8 +60,11 @@ def main(argv: list[str] | None = None) -> int:
     total = index.index_records(client, settings.collection_name, records, embedder)
     where = settings.qdrant_url or settings.qdrant_path
     print(f"Indexed {total} chunks into '{settings.collection_name}' at {where} in {time.time() - started:.0f}s")
+    client.close()
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    code = main()
+    silence_teardown_noise()
+    raise SystemExit(code)
